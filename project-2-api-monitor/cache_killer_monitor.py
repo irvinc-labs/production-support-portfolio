@@ -1,0 +1,128 @@
+import urllib.request
+import urllib.error
+import json
+import os
+import time
+import sys
+import random
+from dotenv import load_dotenv
+
+load_dotenv()
+from dotenv import load_dotenv
+
+load_dotenv()
+
+TARGET_URL = "https://production-support-portfolio.onrender.com/checkout"
+SLACK_WEBHOOK = os.environ.get("SLACK_ALERT_WEBHOOK_URL")
+RENDER_API_KEY = os.environ.get("RENDER_API_KEY")
+RENDER_SERVICE_ID = os.environ.get("RENDER_SERVICE_ID")
+
+consecutive_failures = 0
+FAILURE_THRESHOLD = 3
+
+def send_slack_alert(status_code, custom_text=None):
+    if not SLACK_WEBHOOK:
+        return
+    
+    message_text = custom_text if custom_text else f"🚨 *PRODUCTION INCIDENT CAPTURED:* Endpoint `/checkout` degraded with HTTP {status_code}."
+    payload = {"text": message_text}
+
+    try:
+        req = urllib.request.Request(SLACK_WEBHOOK, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        urllib.request.urlopen(req)
+        print("   ↳ 📬 [SLACK ENGINE] Alert card pushed to channel!")
+    except Exception as e:
+        print(f"   ↳ ❌ [SLACK] Notification routing failed: {e}")
+
+def trigger_service_restart():
+    if not RENDER_API_KEY or not RENDER_SERVICE_ID:
+        print("⚠️ Restart skipped: Missing RENDER_API_KEY or RENDER_SERVICE_ID variables.")
+        return
+
+    print("\n💥 SRE REMEDIATION CRITERIA MET: 3 Consecutive Outages. Executing automated service restart...")
+    
+    # Notify team that production support tools are intervening to restore service immediately
+    send_slack_alert(
+        "500", 
+        custom_text="🔄 *AUTOMATED REMEDIATION:* 3 consecutive application errors detected. Initiating emergency infrastructure restart via Render API Gateway..."
+    )
+
+    # Official Render API endpoint to recycle the service container
+    url = f"https://api.render.com/v1/services/{RENDER_SERVICE_ID}/restart"
+    try:
+        req = urllib.request.Request(url, method="POST", headers={
+            "Accept": "application/json",
+            "Authorization": f"Bearer {RENDER_API_KEY}"
+        })
+        with urllib.request.urlopen(req) as res:
+            if res.status in [200, 202]:
+                print("✅ Render API accepted restart command. Activating 10-second validation cooldown...\n")
+                for remaining in range(10, 0, -1):
+                    print(f"   ⏳ Cooldown: {remaining}s remaining...", flush=True)
+                    time.sleep(1)
+            else:
+                print(f"❌ API Gateway Error Code: {res.status}")
+    except Exception as e:
+        print(f"❌ Failed to reach Render recovery gateway: {e}")
+
+def run_cache_killer():
+    global consecutive_failures
+    print(f"🚀 === [STARTING PRODUCTION SUPPORT MONITOR & RECOVERY TOOL] ===")
+    print(f"🎯 Target Vector: {TARGET_URL}")
+    print("⚡ Mode: Tracking application stability boundaries from the infrastructure layer...")
+    print("Press Ctrl+C to terminate monitor loop.\n")
+
+    request_count = 1
+
+    while True:
+        try:
+            entropy_key = f"txn_{time.time_ns()}_{random.randint(100000, 999999)}"
+            url_with_cache_shatter = f"{TARGET_URL}?id={entropy_key}"
+
+            headers = {
+                'User-Agent': f'Mozilla/5.0 SRE-Support-Bot-{random.randint(1,100)}',
+                'Connection': 'close',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+
+            req = urllib.request.Request(url_with_cache_shatter, headers=headers)
+
+            with urllib.request.urlopen(req, timeout=5) as response:
+                body_text = response.read().decode('utf-8')
+
+                if "error" in body_text:
+                    print(f"   Response body: {body_text[:200]}")
+                    consecutive_failures += 1
+                    print(f"[{time.strftime('%H:%M:%S')}] Hit #{request_count}: 🚨 APPLICATION ERROR DETECTED! Status 500 ({consecutive_failures}/{FAILURE_THRESHOLD})")
+                    send_slack_alert("🚨 *PRODUCTION INCIDENT CAPTURED:* Endpoint `/checkout` degraded with HTTP 500.")
+                    
+                    if consecutive_failures >= FAILURE_THRESHOLD:
+                        trigger_service_restart()
+                        consecutive_failures = 0
+                else:
+                    if consecutive_failures > 0:
+                        print(f"[{time.strftime('%H:%M:%S')}] Hit #{request_count}: HTTP 200 OK ✅ (Strike count reset to 0)")
+                    else:
+                        print(f"[{time.strftime('%H:%M:%S')}] Hit #{request_count}: HTTP 200 OK ✅")
+                    consecutive_failures = 0
+
+        except urllib.error.HTTPError as e:
+            consecutive_failures += 1
+            print(f"[{time.strftime('%H:%M:%S')}] Hit #{request_count}: 🚨 OUTAGE TRIPPED VIA GATEWAY (HTTP {e.code}) ({consecutive_failures}/{FAILURE_THRESHOLD})")
+            send_slack_alert(e.code)
+            
+            if consecutive_failures >= FAILURE_THRESHOLD:
+                trigger_service_restart()
+                consecutive_failures = 0
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}] Hit #{request_count}: Path Disruption -> {e}")
+
+        request_count += 1
+        time.sleep(0.8)
+
+if __name__ == "__main__":
+    try:
+        run_cache_killer()
+    except KeyboardInterrupt:
+        print("\n🛑 Support monitoring loop suspended by on-call engineer.")
