@@ -1,3 +1,4 @@
+from urllib.parse import urlparse
 import http.server
 import random
 import logging
@@ -22,14 +23,14 @@ class ProductionMockApp(http.server.BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        if self.path == '/health':
+        if urlparse(self.path).path == '/health':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(b'{"status": "UP", "database": "CONNECTED"}')
             logging.info("Health check endpoint hit - Status: 200 OK")
             
-        elif self.path == '/checkout':
+        elif urlparse(self.path).path == '/checkout':
             if random.random() < 0.20:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
