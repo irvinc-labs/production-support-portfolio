@@ -1,3 +1,4 @@
 .env
 *.log
 app_production.log
+.env
