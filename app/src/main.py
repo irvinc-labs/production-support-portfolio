@@ -35,7 +35,7 @@ class ProductionMockApp(http.server.BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(b'{"error": "Internal Server Error"}')
-                logging.error("CRITICAL: Payment gateway timeout - HTTP 504 Gateway Timeout from local provider.")
+                logging.error("CRITICAL: Payment gateway timeout - HTTP 504 Gateway Timeout.")
             else:
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
@@ -47,7 +47,8 @@ class ProductionMockApp(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 8080))
+    # Force default port to 10000 to match Render's internal routing network
+    port = int(os.environ.get("PORT", 10000))
     server_address = ('0.0.0.0', port)
     httpd = http.server.HTTPServer(server_address, ProductionMockApp)
     print(f"=== [AU/NZ Support Portfolio App] Running on port {port} ===")
