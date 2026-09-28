@@ -3,15 +3,12 @@ import random
 import logging
 import os
 
-# Create a secure path inside the restricted user's home folder
 log_directory = "/home/appuser"
 if not os.path.exists(log_directory):
-    # Fallback to local path if running outside Docker on your laptop
     log_file_path = "app_production.log"
 else:
     log_file_path = os.path.join(log_directory, "app_production.log")
 
-# Setup enterprise-style logging format using the patched safe path
 logging.basicConfig(
     filename=log_file_path,
     level=logging.INFO,
@@ -50,7 +47,6 @@ class ProductionMockApp(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
 if __name__ == '__main__':
-    # Dynamic port binding so Render can inject its own port configuration smoothly
     port = int(os.environ.get("PORT", 8080))
     server_address = ('0.0.0.0', port)
     httpd = http.server.HTTPServer(server_address, ProductionMockApp)
