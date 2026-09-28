@@ -1,10 +1,11 @@
 import os
 import sys
 import json
+import re
 import urllib.request
 import pandas as pd
 
-# 1. Path & Configuration Calculation
+# 1. Path Calculation
 CURRENT_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(CURRENT_SCRIPT_DIR)
 csv_path = os.path.join(BASE_DIR, "metrics_history.csv")
@@ -15,15 +16,17 @@ CRITICAL_P99_LATENCY_MAX = 800.0  # ms
 # Fetch webhook from environment context
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
-# SECURE FALLBACK LOGIC FOR WSL PORTFOLIO ENVIRONMENT
+# SECURE FALLBACK LOGIC FOR WSL PORTFOLIO ENVIRONMENT (.env Regex Parser)
 if not SLACK_WEBHOOK_URL and os.path.exists(os.path.join(BASE_DIR, ".env")):
     try:
         with open(os.path.join(BASE_DIR, ".env"), "r") as env_f:
-            for line in env_f:
-                if line.startswith("SLACK_WEBHOOK_URL"):
-                    SLACK_WEBHOOK_URL = line.split("=")[1].replace('"', '').replace("'", "").strip()
-    except Exception:
-        pass
+            content = env_f.read()
+            # Robust regex to extract values inside single/double quotes or raw text safely
+            match = re.search(r'SLACK_WEBHOOK_URL\s*=\s*["\']?(https://hooks\.slack\.com/[^\s"\']+)["\']?', content)
+            if match:
+                SLACK_WEBHOOK_URL = match.group(1).strip()
+    except Exception as e:
+        print(f"[*] Minor warning: Could not parse local hidden .env file: {e}")
 
 # 2. Safely read dataset matrix
 try:
@@ -66,7 +69,7 @@ if breach_detected:
     print(f"[🚨] SLO Breach detected across {len(incident_reasons)} rule(s)!")
     
     if not SLACK_WEBHOOK_URL:
-        print("[!] Slack notification skipped: SLACK_WEBHOOK_URL variable is not exported.")
+        print("[!] Slack notification skipped: SLACK_WEBHOOK_URL variable is not set or empty.")
         sys.exit(0)
         
     # Build clean, recruiter-grade Slack Block Kit payload
@@ -104,7 +107,7 @@ if breach_detected:
         ]
     }
     
-    # Fire the payload via native Python libraries to avoid curl dependency limits
+    # Fire payload to Slack API endpoint securely
     try:
         req = urllib.request.Request(
             SLACK_WEBHOOK_URL,
@@ -112,10 +115,11 @@ if breach_detected:
             headers={'Content-Type': 'application/json'}
         )
         with urllib.request.urlopen(req) as response:
-            if response.status == 200 or response.status == 204:
+            status = response.getcode()
+            if status in (200, 201, 202):
                 print("[✓] Incident notification successfully dispatched to Slack workspace!")
             else:
-                print(f"[✗] Slack API responded with non-ok status: {response.status}")
+                print(f"[✗] Slack API responded with non-ok status: {status}")
     except Exception as e:
         print(f"[✗] Network exception encountered dispatching to Slack: {e}")
 else:
