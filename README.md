@@ -1,8 +1,8 @@
 # 🛒 System: E-Commerce Checkout & Payment Gateway Simulator
 
 ### 🌐 Live Production Environments (Click to Inspect)
-*   **SRE Monitoring Telemetry Layer:** [Live System Health Endpoint](https://onrender.com)
-*   **User Traffic Gateway (Simulates 20% Outages):** [Live Checkout Endpoint](https://onrender.com)
+*   **SRE Monitoring Telemetry Layer:** [Live System Health Endpoint](https://production-support-portfolio.onrender.com/healthcheck)
+*   **User Traffic Gateway (Simulates 20% Outages):** [Live Checkout Endpoint](https://production-support-portfolio.onrender.com/checkout)
 
 ---
 
