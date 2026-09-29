@@ -20,6 +20,8 @@ As an Application Support Analyst, I built and managed the operations layer for 
 *   **Root Cause Analysis:** The application code was configured to write logs directly to the root `/app` directory. Because the container is strictly hardened to run as a non-root user (`appuser`), the cloud operating system blocked unauthorized file writes.
 *   **Remediation:** Isolated the issue via Render build logs. Created a dedicated troubleshooting branch, patched the path vector to utilize the safe home directory (`/home/appuser/`), and executed a formal code **Pull Request (PR) review** to safely merge the fix into production.
 
+![Slack Bot](docs/assets/Slack Incident Post, Auto Recovery and Daily Availability and Performance Report.png)
+
 ## 📊 Observability & System Performance
 Below is the telemetry visualization generated from the 30-day simulated chaos engineering matrix:
 
