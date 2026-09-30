@@ -1,7 +1,7 @@
 # 🛒 System: Lightweight E-Commerce Checkout WebService Simulator
 
 ### 🌐 Live Production Environments (Click to Inspect)
-*   **SRE Monitoring Telemetry Layer:** [Live System Health Endpoint](https://production-support-portfolio.onrender.com/healthcheck)
+*   **SRE Monitoring Telemetry Layer:** [Live System Health Endpoint](https://production-support-portfolio.onrender.com/health)
 *   **User Traffic Gateway (Simulates 20% Outages):** [Live Checkout Endpoint](https://production-support-portfolio.onrender.com/checkout)
 
 ---
